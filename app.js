@@ -40,32 +40,18 @@ class LooFinder {
     initializeMap() {
         try {
             console.log('Initializing map...');
-            const debugDiv = document.getElementById('map-debug');
-            if (debugDiv) debugDiv.innerHTML = 'Initializing map...';
             
             // Check if map container exists
             const mapContainer = document.getElementById('map');
             if (!mapContainer) {
                 console.error('Map container not found!');
-                if (debugDiv) debugDiv.innerHTML = 'ERROR: Map container not found!';
                 return;
             }
-            
-            console.log('Map container found:', mapContainer);
-            const dimensions = {
-                width: mapContainer.offsetWidth,
-                height: mapContainer.offsetHeight,
-                clientWidth: mapContainer.clientWidth,
-                clientHeight: mapContainer.clientHeight
-            };
-            console.log('Map container dimensions:', dimensions);
-            if (debugDiv) debugDiv.innerHTML = `Container: ${dimensions.width}x${dimensions.height}`;
             
             // Initialize Leaflet map centered on Melbourne
             this.map = L.map('map').setView([-37.8136, 144.9631], 13);
             
             console.log('Leaflet map created successfully');
-            if (debugDiv) debugDiv.innerHTML = 'Map created, loading tiles...';
             
             // Try CartoDB Voyager tiles first
             const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -99,15 +85,8 @@ class LooFinder {
             setTimeout(() => {
                 if (this.map && this.map._container) {
                     console.log('Map initialized successfully');
-                    if (debugDiv) {
-                        debugDiv.innerHTML = '✅ Map loaded successfully!';
-                        setTimeout(() => {
-                            if (debugDiv) debugDiv.style.display = 'none';
-                        }, 3000);
-                    }
                 } else {
                     console.error('Map initialization failed');
-                    if (debugDiv) debugDiv.innerHTML = '❌ Map initialization failed';
                 }
             }, 1000);
 

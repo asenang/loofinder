@@ -424,14 +424,7 @@
         </aside>
 
         <!-- Map Container -->
-        <main id="map">
-            <div id="map-debug" style="position: absolute; top: 10px; left: 10px; background: white; padding: 10px; border-radius: 5px; z-index: 1000; font-family: monospace; font-size: 12px;">
-                Loading map...
-            </div>
-            <div id="script-test" style="position: absolute; top: 10px; right: 10px; background: red; color: white; padding: 10px; border-radius: 5px; z-index: 1000; font-family: monospace; font-size: 12px;">
-                Scripts NOT loaded
-            </div>
-        </main>
+        <main id="map"></main>
     </div>
 
     <!-- Review Modal -->
@@ -454,60 +447,14 @@
     </div>
 
     <script>
-        console.log('HTML loaded, checking dependencies...');
-        
-        // Update script test indicator
-        const scriptTest = document.getElementById('script-test');
-        if (scriptTest) {
-            scriptTest.innerHTML = 'Scripts loading...';
-            scriptTest.style.background = 'orange';
-        }
-        
-        // Check if required libraries are loaded
-        if (typeof L === 'undefined') {
-            console.error('Leaflet not loaded!');
-            const debugDiv = document.getElementById('map-debug');
-            if (debugDiv) debugDiv.innerHTML = '❌ Leaflet library not loaded';
-        } else {
-            console.log('Leaflet loaded successfully');
-            if (scriptTest) {
-                scriptTest.innerHTML = 'Leaflet loaded ✅';
-                scriptTest.style.background = 'green';
-            }
-        }
-        
-        if (typeof DataLoader === 'undefined') {
-            console.error('DataLoader not loaded!');
-        } else {
-            console.log('DataLoader loaded successfully');
-        }
-        
-        if (typeof LooFinder === 'undefined') {
-            console.error('LooFinder class not loaded!');
-            const debugDiv = document.getElementById('map-debug');
-            if (debugDiv) debugDiv.innerHTML = '❌ LooFinder class not loaded';
-        } else {
-            console.log('LooFinder class loaded successfully');
-            if (scriptTest) {
-                scriptTest.innerHTML = 'All scripts loaded ✅';
-                scriptTest.style.background = 'green';
-            }
-        }
-        
         // Initialize app when DOM is fully loaded
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing LooFinder...');
             try {
                 window.app = new LooFinder();
                 console.log('LooFinder instance created');
-                if (scriptTest) {
-                    scriptTest.innerHTML = 'App initialized ✅';
-                    scriptTest.style.background = 'blue';
-                }
             } catch (error) {
                 console.error('Error creating LooFinder:', error);
-                const debugDiv = document.getElementById('map-debug');
-                if (debugDiv) debugDiv.innerHTML = `❌ Error: ${error.message}`;
             }
         });
         
@@ -520,26 +467,9 @@
                     console.log('LooFinder instance created (fallback)');
                 } catch (error) {
                     console.error('Error creating LooFinder (fallback):', error);
-                    const debugDiv = document.getElementById('map-debug');
-                    if (debugDiv) debugDiv.innerHTML = `❌ Fallback Error: ${error.message}`;
                 }
             }
         });
-        
-        // Emergency fallback - try to initialize immediately
-        setTimeout(() => {
-            if (!window.app) {
-                console.log('Emergency fallback: trying to initialize...');
-                try {
-                    window.app = new LooFinder();
-                    console.log('LooFinder created (emergency)');
-                } catch (error) {
-                    console.error('Emergency failed:', error);
-                    const debugDiv = document.getElementById('map-debug');
-                    if (debugDiv) debugDiv.innerHTML = `❌ Emergency failed: ${error.message}`;
-                }
-            }
-        }, 1000);
     </script>
 </body>
 </html>

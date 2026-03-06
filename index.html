@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>LooFinder — Melbourne</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <script src="data-loader.js"></script>
+    <script src="app.js"></script>
+    <style>
+      :root {
+        --sand: #f5f0e8;
+        --cream: #faf7f2;
+        --bark: #2c1f0e;
+        --eucalypt: #3d6b4f;
+        --eucalypt-light: #5a9470;
+        --wattle: #d4a017;
+        --coral: #c85a3a;
+        --mist: #e8ede9;
+        --text: #1a1208;
+        --text-muted: #6b5e48;
+        --card-bg: #ffffff;
+        --border: #ddd6c8;
+      }
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body { 
+          height: 100%; 
+          width: 100%;
+          overflow: hidden;
+      }
+
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--sand);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+      }
+
+      #map { 
+          height: calc(100vh - 80px); 
+          width: 100%;
+          flex: 1;
+          min-height: 400px;
+          position: relative;
+          z-index: 1;
+          background: #e0e0e0;
+      }
+
+      /* Header */
+      header {
+        background: var(--bark);
+        padding: 0.75rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1000;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+      }
+
+      .logo {
+        font-family: 'Bricolage Grotesque', sans-serif;
+        font-weight: 800;
+        font-size: 1.35rem;
+        color: var(--wattle);
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+      }
+      .logo span { color: var(--cream); }
+
+      .search-bar {
+        flex: 1;
+        display: flex;
+        gap: 0.5rem;
+        max-width: 480px;
+      }
+      .search-bar input {
+        flex: 1;
+        padding: 0.55rem 1rem;
+        border-radius: 8px;
+        border: 1.5px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.88rem;
+        outline: none;
+        transition: border 0.2s, background 0.2s;
+      }
+      .search-bar input::placeholder { color: rgba(255,255,255,0.4); }
+      .search-bar input:focus {
+        border-color: var(--wattle);
+        background: rgba(255,255,255,0.15);
+      }
+      .search-bar button {
+        padding: 0.55rem 1rem;
+        border-radius: 8px;
+        border: none;
+        background: var(--eucalypt);
+        color: #fff;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.2s, transform 0.1s;
+      }
+      .search-bar button:hover { background: var(--eucalypt-light); }
+      .search-bar button:active { transform: scale(0.97); }
+
+      .locate-btn {
+        padding: 0.55rem 1rem;
+        border-radius: 8px;
+        border: 1.5px solid rgba(255,255,255,0.15);
+        background: transparent;
+        color: var(--wattle);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .locate-btn:hover { background: rgba(212,160,23,0.12); }
+
+      /* Layout */
+      .app-body {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 340px;
+        flex-shrink: 0;
+        background: var(--cream);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .sidebar-header {
+        padding: 1rem 1.25rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .sidebar-header h2 {
+        font-family: 'Bricolage Grotesque', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--bark);
+        letter-spacing: -0.01em;
+      }
+      .result-count {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-top: 0.2rem;
+      }
+
+      /* Filters */
+      .filters {
+        padding: 0.75rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        flex-shrink: 0;
+      }
+      .filter-chip {
+        padding: 0.3rem 0.7rem;
+        border-radius: 20px;
+        border: 1.5px solid var(--border);
+        background: white;
+        font-size: 0.75rem;
+        font-family: 'DM Sans', sans-serif;
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+      .filter-chip.active {
+        background: var(--eucalypt);
+        border-color: var(--eucalypt);
+        color: white;
+      }
+      .filter-chip:hover:not(.active) {
+        border-color: var(--eucalypt);
+        color: var(--eucalypt);
+      }
+
+      /* List */
+      .toilet-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.5rem 0;
+      }
+      .toilet-list::-webkit-scrollbar { width: 4px; }
+      .toilet-list::-webkit-scrollbar-track { background: transparent; }
+      .toilet-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+      .toilet-card {
+        padding: 0.9rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        transition: background 0.15s;
+        position: relative;
+      }
+      .toilet-card:hover { background: var(--mist); }
+      .toilet-card.selected { background: #eaf2ed; border-left: 3px solid var(--eucalypt); }
+
+      .toilet-card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      .toilet-name {
+        font-family: 'Bricolage Grotesque', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--bark);
+        line-height: 1.3;
+        flex: 1;
+      }
+      .toilet-dist {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--eucalypt);
+        white-space: nowrap;
+        background: #eaf2ed;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+      }
+      .toilet-addr {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-top: 0.3rem;
+        line-height: 1.4;
+      }
+      .toilet-tags {
+        display: flex;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+      }
+      .tag {
+        font-size: 0.68rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        background: var(--sand);
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+      }
+      .tag.green { background: #eaf2ed; color: var(--eucalypt); border-color: #c0dcc8; }
+      .tag.pink { background: #fce4ec; color: #c85a3a; border-color: #f8bbd9; }
+      .tag.blue { background: #e3f2fd; color: #1976d2; border-color: #bbdefb; }
+      .tag.yellow { background: #fff9c4; color: #f57f17; border-color: #fff59d; }
+
+      /* Review Modal */
+      .review-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .review-modal.active {
+        display: flex;
+      }
+      .review-content {
+        background: var(--card-bg);
+        padding: 2rem;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+      .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+      .review-title {
+        font-family: 'Bricolage Grotesque', sans-serif;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--bark);
+      }
+      .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-muted);
+      }
+      .star-rating {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .star {
+        font-size: 1.5rem;
+        color: var(--border);
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+      .star.active {
+        color: var(--wattle);
+      }
+      .review-textarea {
+        width: 100%;
+        min-height: 100px;
+        padding: 0.75rem;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9rem;
+        resize: vertical;
+        margin-bottom: 1.5rem;
+      }
+      .review-textarea:focus {
+        outline: none;
+        border-color: var(--eucalypt);
+      }
+      .submit-btn {
+        background: var(--eucalypt);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .submit-btn:hover {
+        background: var(--eucalypt-light);
+      }
+
+      /* Notifications */
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1001;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9rem;
+      }
+      .notification.success {
+        background: var(--eucalypt);
+        color: white;
+      }
+      .notification.error {
+        background: var(--coral);
+        color: white;
+      }
+      .notification.info {
+        background: var(--wattle);
+        color: white;
+      }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Loo<span>Finder</span></div>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search by location or suburb...">
+            <button onclick="app.handleSearch(document.getElementById('searchInput').value)">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+        <button class="locate-btn" onclick="app.locateUser()">
+            <i class="fas fa-location-arrow"></i>
+            Find My Location
+        </button>
+    </header>
+
+    <div class="app-body">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Nearby Toilets</h2>
+                <div class="result-count" id="resultCount">Loading...</div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-chip" id="wheelchip" onclick="app.toggleFilter('wheelchairAccessible', this)">
+                    <i class="fas fa-wheelchair"></i> Wheelchair
+                </div>
+                <div class="filter-chip" id="babychip" onclick="app.toggleFilter('babyChange', this)">
+                    <i class="fas fa-baby"></i> Baby Change
+                </div>
+                <div class="filter-chip" id="freechip" onclick="app.toggleFilter('freeAccess', this)">
+                    <i class="fas fa-dollar-sign"></i> Free
+                </div>
+            </div>
+
+            <!-- Toilet List -->
+            <div class="toilet-list" id="toiletList">
+                <!-- Toilets will be populated here -->
+            </div>
+        </aside>
+
+        <!-- Map Container -->
+        <main id="map">
+            <div id="map-debug" style="position: absolute; top: 10px; left: 10px; background: white; padding: 10px; border-radius: 5px; z-index: 1000; font-family: monospace; font-size: 12px;">
+                Loading map...
+            </div>
+            <div id="script-test" style="position: absolute; top: 10px; right: 10px; background: red; color: white; padding: 10px; border-radius: 5px; z-index: 1000; font-family: monospace; font-size: 12px;">
+                Scripts NOT loaded
+            </div>
+        </main>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="review-modal" id="reviewModal">
+        <div class="review-content">
+            <div class="review-header">
+                <h3 class="review-title">Leave a Review</h3>
+                <button class="close-btn" onclick="app.closeReviewModal()">&times;</button>
+            </div>
+            <div class="star-rating" id="starRating">
+                <span class="star" data-rating="1">★</span>
+                <span class="star" data-rating="2">★</span>
+                <span class="star" data-rating="3">★</span>
+                <span class="star" data-rating="4">★</span>
+                <span class="star" data-rating="5">★</span>
+            </div>
+            <textarea class="review-textarea" id="reviewText" placeholder="Share your experience..."></textarea>
+            <button class="submit-btn" onclick="app.submitReview()">Submit Review</button>
+        </div>
+    </div>
+
+    <script>
+        console.log('HTML loaded, checking dependencies...');
+        
+        // Update script test indicator
+        const scriptTest = document.getElementById('script-test');
+        if (scriptTest) {
+            scriptTest.innerHTML = 'Scripts loading...';
+            scriptTest.style.background = 'orange';
+        }
+        
+        // Check if required libraries are loaded
+        if (typeof L === 'undefined') {
+            console.error('Leaflet not loaded!');
+            const debugDiv = document.getElementById('map-debug');
+            if (debugDiv) debugDiv.innerHTML = '❌ Leaflet library not loaded';
+        } else {
+            console.log('Leaflet loaded successfully');
+            if (scriptTest) {
+                scriptTest.innerHTML = 'Leaflet loaded ✅';
+                scriptTest.style.background = 'green';
+            }
+        }
+        
+        if (typeof DataLoader === 'undefined') {
+            console.error('DataLoader not loaded!');
+        } else {
+            console.log('DataLoader loaded successfully');
+        }
+        
+        if (typeof LooFinder === 'undefined') {
+            console.error('LooFinder class not loaded!');
+            const debugDiv = document.getElementById('map-debug');
+            if (debugDiv) debugDiv.innerHTML = '❌ LooFinder class not loaded';
+        } else {
+            console.log('LooFinder class loaded successfully');
+            if (scriptTest) {
+                scriptTest.innerHTML = 'All scripts loaded ✅';
+                scriptTest.style.background = 'green';
+            }
+        }
+        
+        // Initialize app when DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing LooFinder...');
+            try {
+                window.app = new LooFinder();
+                console.log('LooFinder instance created');
+                if (scriptTest) {
+                    scriptTest.innerHTML = 'App initialized ✅';
+                    scriptTest.style.background = 'blue';
+                }
+            } catch (error) {
+                console.error('Error creating LooFinder:', error);
+                const debugDiv = document.getElementById('map-debug');
+                if (debugDiv) debugDiv.innerHTML = `❌ Error: ${error.message}`;
+            }
+        });
+        
+        // Fallback initialization
+        window.addEventListener('load', function() {
+            if (!window.app) {
+                console.log('Window loaded, initializing LooFinder as fallback...');
+                try {
+                    window.app = new LooFinder();
+                    console.log('LooFinder instance created (fallback)');
+                } catch (error) {
+                    console.error('Error creating LooFinder (fallback):', error);
+                    const debugDiv = document.getElementById('map-debug');
+                    if (debugDiv) debugDiv.innerHTML = `❌ Fallback Error: ${error.message}`;
+                }
+            }
+        });
+        
+        // Emergency fallback - try to initialize immediately
+        setTimeout(() => {
+            if (!window.app) {
+                console.log('Emergency fallback: trying to initialize...');
+                try {
+                    window.app = new LooFinder();
+                    console.log('LooFinder created (emergency)');
+                } catch (error) {
+                    console.error('Emergency failed:', error);
+                    const debugDiv = document.getElementById('map-debug');
+                    if (debugDiv) debugDiv.innerHTML = `❌ Emergency failed: ${error.message}`;
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

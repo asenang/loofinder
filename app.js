@@ -41,8 +41,25 @@ class LooFinder {
         try {
             console.log('Initializing map...');
             
+            // Check if map container exists
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) {
+                console.error('Map container not found!');
+                return;
+            }
+            
+            console.log('Map container found:', mapContainer);
+            console.log('Map container dimensions:', {
+                width: mapContainer.offsetWidth,
+                height: mapContainer.offsetHeight,
+                clientWidth: mapContainer.clientWidth,
+                clientHeight: mapContainer.clientHeight
+            });
+            
             // Initialize Leaflet map centered on Melbourne
             this.map = L.map('map').setView([-37.8136, 144.9631], 13);
+            
+            console.log('Leaflet map created successfully');
             
             // Try CartoDB Voyager tiles first
             const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {

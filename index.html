@@ -42,10 +42,13 @@
       }
 
       #map { 
-          height: 100vh; 
+          height: calc(100vh - 80px); 
           width: 100%;
           flex: 1;
-          min-height: 0;
+          min-height: 400px;
+          position: relative;
+          z-index: 1;
+          background: #e0e0e0;
       }
 
       /* Header */
@@ -442,6 +445,20 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+        // Initialize app when DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing LooFinder...');
+            window.app = new LooFinder();
+        });
+        
+        // Fallback initialization
+        window.addEventListener('load', function() {
+            if (!window.app) {
+                console.log('Window loaded, initializing LooFinder as fallback...');
+                window.app = new LooFinder();
+            }
+        });
+    </script>
 </body>
 </html>

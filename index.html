@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
     <script src="data-loader.js"></script>
+    <script src="app.js"></script>
     <style>
       :root {
         --sand: #f5f0e8;
@@ -450,19 +451,65 @@
     </div>
 
     <script>
+        console.log('HTML loaded, checking dependencies...');
+        
+        // Check if required libraries are loaded
+        if (typeof L === 'undefined') {
+            console.error('Leaflet not loaded!');
+            const debugDiv = document.getElementById('map-debug');
+            if (debugDiv) debugDiv.innerHTML = '❌ Leaflet library not loaded';
+        } else {
+            console.log('Leaflet loaded successfully');
+        }
+        
+        if (typeof DataLoader === 'undefined') {
+            console.error('DataLoader not loaded!');
+        } else {
+            console.log('DataLoader loaded successfully');
+        }
+        
         // Initialize app when DOM is fully loaded
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing LooFinder...');
-            window.app = new LooFinder();
+            try {
+                window.app = new LooFinder();
+                console.log('LooFinder instance created');
+            } catch (error) {
+                console.error('Error creating LooFinder:', error);
+                const debugDiv = document.getElementById('map-debug');
+                if (debugDiv) debugDiv.innerHTML = `❌ Error: ${error.message}`;
+            }
         });
         
         // Fallback initialization
         window.addEventListener('load', function() {
             if (!window.app) {
                 console.log('Window loaded, initializing LooFinder as fallback...');
-                window.app = new LooFinder();
+                try {
+                    window.app = new LooFinder();
+                    console.log('LooFinder instance created (fallback)');
+                } catch (error) {
+                    console.error('Error creating LooFinder (fallback):', error);
+                    const debugDiv = document.getElementById('map-debug');
+                    if (debugDiv) debugDiv.innerHTML = `❌ Fallback Error: ${error.message}`;
+                }
             }
         });
+        
+        // Emergency fallback - try to initialize immediately
+        setTimeout(() => {
+            if (!window.app) {
+                console.log('Emergency fallback: trying to initialize...');
+                try {
+                    window.app = new LooFinder();
+                    console.log('LooFinder created (emergency)');
+                } catch (error) {
+                    console.error('Emergency failed:', error);
+                    const debugDiv = document.getElementById('map-debug');
+                    if (debugDiv) debugDiv.innerHTML = `❌ Emergency failed: ${error.message}`;
+                }
+            }
+        }, 1000);
     </script>
 </body>
 </html>

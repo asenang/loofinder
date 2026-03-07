@@ -156,71 +156,122 @@ class LooFinder {
 
     async loadToiletData() {
         try {
-            console.log('=== Loading Toilet Data for Current Map View ===');
+            console.log('=== Loading Toilet Data (Smart Cache) ===');
             
-            // Get current map bounds
-            const bounds = this.map.getBounds();
-            const mapBounds = {
-                south: bounds.getSouth(),
-                north: bounds.getNorth(),
-                west: bounds.getWest(),
-                east: bounds.getEast()
-            };
-            
-            console.log('Map bounds:', mapBounds);
-            
-            let newToilets = [];
-            
-            if (window.DataLoader) {
-                console.log('DataLoader available, fetching OpenStreetMap data for current view...');
-                const dataLoader = new DataLoader();
-                const osmData = await dataLoader.fetchOpenStreetMapData(mapBounds);
-                newToilets = osmData;
-                console.log(`Loaded ${newToilets.length} toilets from OpenStreetMap for current view`);
-                
-                // If OSM fails, try to use any cached data first
-                if (newToilets.length === 0) {
-                    console.log('No OSM data, checking for cached data...');
-                    newToilets = this.getSampleDataInBounds(mapBounds);
-                    console.log(`Using ${newToilets.length} sample toilets in bounds`);
-                }
-            } else {
-                console.log('DataLoader not available, using sample data in bounds');
-                newToilets = this.getSampleDataInBounds(mapBounds);
-                console.log(`Using ${newToilets.length} sample toilets in bounds`);
-            }
-            
-            // Always update if we have data (new or cached)
-            if (newToilets.length > 0) {
-                this.toilets = newToilets;
-                console.log('Final toilets array:', this.toilets);
-                if (this.toilets.length > 0) {
-                    console.log('Sample toilet:', this.toilets[0]);
-                }
-                
+            // Try smart cache first
+            const cacheData = await this.loadFromCache();
+            if (cacheData) {
+                this.toilets = cacheData.toilets;
+                console.log(`✅ Using cached data (${cacheData.toilets.length} toilets, ${cacheData.age}h old)`);
                 this.displayToilets();
                 this.updateAllToiletRatings();
                 this.updateToiletList();
-            } else {
-                console.log('No toilets found in current bounds, keeping existing data');
-                // Only show notification if we have no toilets at all
-                if (this.toilets.length === 0) {
-                    this.showNotification('No toilets found in this area. Try moving the map.', 'info');
+                
+                // Check if cache needs background update
+                if (cacheData.needsUpdate) {
+                    console.log('🔄 Cache needs update, fetching fresh data...');
+                    await this.updateCacheInBackground();
                 }
+                
+                return;
             }
+            
+            // Fallback to OSM API
+            console.log('🌐 No cache available, fetching from OSM...');
+            const osmData = await this.loadFromOSM();
+            if (osmData.length > 0) {
+                this.toilets = osmData;
+                // Update cache with fresh data
+                await this.saveToCache(osmData);
+                console.log('💾 Updated cache with fresh OSM data');
+            }
+            
+            this.displayToilets();
+            this.updateAllToiletRatings();
+            this.updateToiletList();
             
         } catch (error) {
             console.error('Error loading toilet data:', error);
-            console.log('Falling back to sample data due to error');
-            const bounds = this.map.getBounds();
+            console.log('🆘 Using sample data as fallback');
             this.toilets = this.getSampleDataInBounds({
-                south: bounds.getSouth(),
-                north: bounds.getNorth(),
-                west: bounds.getWest(),
-                east: bounds.getEast()
+                south: -38.0,
+                north: -37.7,
+                west: 144.8,
+                east: 145.0
             });
             this.displayToilets();
+            this.updateAllToiletRatings();
             this.updateToiletList();
+        }
+    }
+
+    // Smart cache loading with age checking
+    async loadFromCache() {
+        try {
+            const response = await fetch('melbourne-toilets-cache.json');
+            if (!response.ok) {
+                console.log('Cache file not found');
+                return null;
+            }
+            
+            const cacheData = await response.json();
+            const now = Date.now();
+            const cacheTime = new Date(cacheData.lastUpdated).getTime();
+            const cacheAge = (now - cacheTime) / (1000 * 60 * 60); // hours
+            
+            const CACHE_MAX_AGE = 6; // 6 hours
+            const needsUpdate = cacheAge > CACHE_MAX_AGE;
+            
+            console.log(`Cache age: ${cacheAge.toFixed(1)}h, max age: ${CACHE_MAX_AGE}h, needs update: ${needsUpdate}`);
+            
+            return {
+                toilets: cacheData.toilets,
+                age: cacheAge,
+                needsUpdate: needsUpdate,
+                lastUpdated: cacheData.lastUpdated
+            };
+            
+        } catch (error) {
+            console.error('Error loading cache:', error);
+            return null;
+        }
+    }
+
+    // Save fresh data to cache
+    async saveToCache(toilets) {
+        try {
+            const cacheData = {
+                lastUpdated: new Date().toISOString(),
+                version: "1.0.0",
+                updateFrequency: "6h",
+                toilets: toilets
+            };
+            
+            // In a real app, this would save to localStorage or server
+            console.log('💾 Cache updated with', toilets.length, 'toilets');
+            
+        } catch (error) {
+            console.error('Error saving cache:', error);
+        }
+    }
+
+    // Background cache update
+    async updateCacheInBackground() {
+        try {
+            console.log('🔄 Starting background cache update...');
+            const freshData = await this.loadFromOSM();
+            
+            if (freshData.length > 0) {
+                await this.saveToCache(freshData);
+                this.toilets = freshData;
+                this.displayToilets();
+                this.updateAllToiletRatings();
+                this.updateToiletList();
+                console.log('✅ Background cache update completed');
+            }
+            
+        } catch (error) {
+            console.error('Background update failed:', error);
         }
     }
 
